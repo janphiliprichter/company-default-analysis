@@ -1,5 +1,6 @@
 # Loading libraries
 library(tidyverse)
+library(plyr)
 
 ##### Data Preprocessing #####
 
@@ -26,6 +27,36 @@ data <- data %>%
          "score2" = "external_score_ver02",
          "score3" = "external_score_ver03",
          "default" = "target")
+
+# Renaming factors
+data$industry_sector <- revalue(data$industry_sector, 
+                                c("Agricoltura" = "Agriculture",
+                                  "Alimentare" = "Food",
+                                  "Altri beni di consumo" = "Consumer Goods",
+                                  "Chimica di base e intermedi" = "Chemicals",
+                                  "Costruzioni e materiali per costruzioni" = "Construction",
+                                  "Distribuzione" = "Retail",
+                                  "Editoria e stampa" = "Publishing",
+                                  "Elettrodomestici" = "Electrical Appliances",
+                                  "Elettrotecnica ed elettronica" = "Electronics",
+                                  "Energia ed estrazione" = "Energy",
+                                  "Farmaceutica" = "Pharmaceuticals",
+                                  "Holding, finanziarie ed altro" = "Finance",
+                                  "Largo consumo / attività ricreativo-culturali" = "Culture",
+                                  "Meccanica" = "Mechanics",
+                                  "Metallurgia e prodotti in metallo" = "Metal",
+                                  "Mezzi di trasporto" = "Transportation",
+                                  "Servizi" = "Services",
+                                  "Sistema moda" = "Fashion",
+                                  "Trasporti" = "Logistics",
+                                  "Utility" = "Utilities"))
+
+data$geo_area <- revalue(data$geo_area, 
+                         c("Centro" = "Centre",
+                           "Isole" = "Islands",
+                           "Nord-est" = "North-east",
+                           "Nord-ovest" = "North-west",
+                           "Sud" = "South"))
 
 # Checking the data classes
 glimpse(data)
