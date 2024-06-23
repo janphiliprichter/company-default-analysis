@@ -1,8 +1,13 @@
 # Loading libraries
 library(ca)
 library(FactoMineR)
+library(factoextra)
 library(ggrepel)
 library(dplyr)
+library(fpc)
+
+# Setting random seed
+set.seed(42)
 
 # Reading the data set
 data <- read.csv("preprocessed_data.csv",
@@ -10,7 +15,10 @@ data <- read.csv("preprocessed_data.csv",
                  stringsAsFactors = TRUE)
 
 
+# Changing quantitative variables to factors
 data$score1 <- as.factor(data$score1)
+data$default <- as.factor(data$default)
+
 
 ## Frequency Tables & Chi-square test of independence 
 
@@ -194,7 +202,6 @@ fviz_ca_biplot(ca_juridical_score1,
 
 # Selecting the variables for the MCA
 mca_data <- data[, c("geo_area", "industry_sector", "default")]
-mca_data$default <- as.factor(mca_data$default)
 
 # MCA
 mca_res <- MCA(mca_data,
@@ -217,10 +224,10 @@ ggplot(plot_data, aes(x=dim1,
                       y=dim2, 
                       col=category, 
                       shape=category)) +
-  geom_point(aes(size=1.5),
-             show.legend = FALSE) + 
   geom_hline(yintercept=0, linetype="dashed") +
   geom_vline(xintercept=0, linetype="dashed") +
+  geom_point(size=3,
+             show.legend = FALSE) + 
   geom_text_repel(label=rownames(plot_data),
                   box.padding = 0.3) +
   theme_minimal() +
@@ -233,3 +240,101 @@ ggplot(plot_data, aes(x=dim1,
   theme(legend.position = "none")
 
 
+
+
+
+## MCA with province
+
+# Selecting the variables for the MCA
+mca2_data <- data[, c("province", "industry_sector", "default", "score1")]
+
+# MCA
+mca2_res <- MCA(mca2_data,
+               graph = FALSE)
+
+# Bi-plot
+plot2_data <- mca2_res$var$coord[,1:2]
+plot2_data <- as.data.frame(plot2_data)
+
+plot2_data$category <- c(rep("province", 106), 
+                        rep("industry_sector", 20), 
+                        rep("default", 2,),
+                        rep("score1", 9))
+
+plot2_data <- plot2_data %>% 
+  rename("dim1" = "Dim 1",
+         "dim2" = "Dim 2")
+
+
+ggplot(plot2_data, aes(x=dim1, 
+                      y=dim2, 
+                      col=category, 
+                      shape=category)) +
+  geom_hline(yintercept=0, linetype="dashed") +
+  geom_vline(xintercept=0, linetype="dashed") +
+  geom_point(size=3,
+             show.legend = FALSE) + 
+  geom_text_repel(label=rownames(plot2_data),
+                  box.padding = 0.3) +
+  theme_minimal() +
+  scale_shape_manual(values=c(17, 15, 19, 18)) + 
+  scale_color_manual(values=c("#dbca27","#21918c", "#440154", "#31688e")) +
+  labs(title = "MCA - Province, Industry Sector, Default & Score",
+       x = "Dim 1 (1.28%)",
+       y = "Dim 2 (1.20%)") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(legend.position = "none") 
+
+# Zoomed in version
+ggplot(plot2_data, aes(x=dim1, 
+                       y=dim2, 
+                       col=category, 
+                       shape=category)) +
+  geom_hline(yintercept=0, linetype="dashed") +
+  geom_vline(xintercept=0, linetype="dashed") +
+  geom_point(size = 3,
+             show.legend = FALSE,
+             alpha=0.9) +
+  theme_minimal() +
+  scale_shape_manual(values=c(17, 15, 19, 18)) + 
+  scale_color_manual(values=c("#dbca27","#21918c", "#440154", "#31688e")) +
+  labs(title = "MCA - Province, Industry Sector, Default & Score",
+       x = "Dim 1 (1.28%)",
+       y = "Dim 2 (1.20%)") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(legend.position = "none") +
+  xlim(-1.75, 1.6) +
+  ylim(-2, 1.5)
+
+
+## DBSCAN Clustering
+
+dbscan_res <- dbscan(plot2_data[, c("dim1", "dim2")],
+                     eps = 0.2,
+                     MinPts = 3)
+
+plot2_data$cluster <- as.factor(dbscan_res$cluster)
+
+cluster_data <- plot2_data[plot2_data$cluster != 0,]
+
+# Scatterplot
+ggplot(NULL, aes(x=dim1, 
+                       y=dim2, 
+                       col=cluster)) +
+  geom_hline(yintercept=0, linetype="dashed") +
+  geom_vline(xintercept=0, linetype="dashed") +
+  geom_point(data=cluster_data,
+             size=3.5,
+             show.legend = FALSE,
+             alpha=0.9) + 
+  scale_color_manual(values=c("#dbca27","#21918c", "#440154", "#414487", "#7ad151", "#22a884", "black")) +
+  geom_point(data = plot2_data[plot2_data$cluster == 0,],
+             alpha = 0.7) +
+  theme_minimal() +
+  labs(title = "DBSCAN Clusters",
+       x = "Dim 1 (1.28%)",
+       y = "Dim 2 (1.20%)") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(legend.position = "none") +
+  xlim(-1.75, 1.6) +
+  ylim(-2, 1.5)
