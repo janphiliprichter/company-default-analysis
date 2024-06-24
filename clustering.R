@@ -1,26 +1,34 @@
 # Loading libraries
 library(dplyr)
 library(ggplot2)
+library(gridExtra)
 library(GGally)
+library(ggpubr)
 library(factoextra)
 library(scales)
+library(cluster)
+library(fpc)
 
 
 # Reading the data set
 data <- read.csv("preprocessed_data.csv",
-                 tryLogical=TRUE,
-                 stringsAsFactors=TRUE)
+                 tryLogical = TRUE,
+                 stringsAsFactors = TRUE)
 
 
 # Setting random seed
 set.seed(42)
 
 
-### Principal Component Analysis ###
-data_num <- data[, c("score1", "score2", "log_age", "log_revenues", 
+# Numerical data for dimensionality reduction
+data_num <- data[, c("age", "log_revenues", 
                      "log_profits", "sqrt_gmr", "last_statement_age", 
                      "core_income_ratio", "cash_asset_ratio", 
                      "consolidated_liabilities_ratio", "month","month_day")]
+
+
+
+#### Principal Component Analysis ####
 
 
 # Singular value decomposition
@@ -78,7 +86,41 @@ data$pc1 <- svd$x[,"PC1"]
 data$pc2 <- svd$x[,"PC2"]
 
 
-# Elbow plot for k-means
+
+### DBSCAN Clustering ###
+
+dbscan_cl <- dbscan(data[,c("pc1", "pc2")], eps = 0.5, MinPts = 5)
+table(dbscan_cl$cluster) 
+
+# Adding cluster variable to the data set
+data$dbscan_cluster <- as.factor(dbscan_cl$cluster)
+
+
+# Relevelling to plot the histograms in the desired order
+levels(data$dbscan_cluster) <- c( "C2", "C1", "No cluster", "C3")
+data$dbscan_cluster <- relevel(data$dbscan_cluster, ref = 3)
+
+
+# Scatterplot of the clusters
+ggplot(data = data, 
+       mapping = aes(x = pc1,
+                     y = pc2,
+                     color = dbscan_cluster)) +
+  geom_point(size = 0.8, alpha = 0.8) +
+  scale_colour_manual(values = c("red", "#21918c", "#d1af06", "#440154")) +
+  theme_minimal() +
+  labs(x = paste("PC1 (", round(var_exp[1], 2), "%)", sep = ""),
+       y = paste("PC2 (", round(var_exp[2], 2), "%)", sep = ""),
+       title = "DBSCAN-Clustering") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(legend.title = element_blank()) +
+  guides(color = guide_legend(override.aes = list(size = 4)))
+
+
+
+### k-means & k-medoids clustering ###
+
+# Elbow plot
 fviz_nbclust(data[,c("pc1", "pc2")], kmeans, 
              method = "wss",
              linecolor = "#21918c") + 
@@ -91,25 +133,39 @@ fviz_nbclust(data[,c("pc1", "pc2")], kmeans,
 
 
 # k-means algorithm
-km <- kmeans(x = data[,c("pc1", "pc2")], 
-             centers = 3, 
-             nstart = 1000)
+k_means <- kmeans(x = data[,c("pc1", "pc2")], 
+                  centers = 3, 
+                  nstart = 1000)
 
 # Adding cluster variable to the data set
-data$cluster <- as.factor(km$cluster)
-data$cluster
+data$kmean_cluster <- as.factor(k_means$cluster)
+
 # Relevelling to plot the histograms in the desired order
-levels(data$cluster) <- c("C2", "C3", "C1")
-data$cluster <- relevel(data$cluster, ref = 3)
+levels(data$kmean_cluster) <- c("C2", "C3", "C1")
+data$kmean_cluster <- relevel(data$kmean_cluster, ref = 3)
 
 
-# Scatter-plot of the clusters
-ggplot(data = data, 
+# k-medoids algorithm
+k_medoids <- pam(x = data[,c("pc1", "pc2")], 
+                 metric = "euclidean",
+                 k = 3)
+
+# Adding cluster variable to the data set
+data$kmedoids_cluster <- as.factor(k_medoids$cluster)
+
+
+# Relevelling to plot the histograms in the desired order
+levels(data$kmedoids_cluster) <- c("C3", "C2", "C1")
+data$kmedoids_cluster <- relevel(data$kmedoids_cluster, ref = 3)
+
+
+# Scatterplot of the clusters
+plot1 <- ggplot(data = data, 
        mapping = aes(x = pc1,
                      y = pc2,
-                     color = cluster)) +
+                     color = kmean_cluster)) +
   geom_point(size = 0.8, alpha = 0.8) +
-  scale_colour_manual(values = c("#440154FF", "#21908CFF", "#d1af06")) +
+  scale_colour_manual(values = c("#440154", "#21918c", "#d1af06")) +
   theme_minimal() +
   labs(x = paste("PC1 (", round(var_exp[1], 2), "%)", sep = ""),
        y = paste("PC2 (", round(var_exp[2], 2), "%)", sep = ""),
@@ -119,11 +175,27 @@ ggplot(data = data,
   guides(color = guide_legend(override.aes = list(size = 4)))
 
 
+plot2 <- ggplot(data = data, 
+       mapping = aes(x = pc1,
+                     y = pc2,
+                     color = kmedoids_cluster)) +
+  geom_point(size = 0.8, alpha = 0.8) +
+  scale_colour_manual(values = c("#440154", "#d1af06", "#21918c")) +
+  theme_minimal() +
+  labs(x = paste("PC1 (", round(var_exp[1], 2), "%)", sep = ""),
+       y = paste("PC2 (", round(var_exp[2], 2), "%)", sep = ""),
+       title = "3-Medoids-Clustering") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(legend.position = "none")
+
+grid.arrange(plot1, plot2, ncol=2)
+
+
 # Histogram for the different clusters
 ggplot(data = data,
        mapping = aes(x = log_revenues, 
-                     fill = cluster,
-                     colour = cluster)) +
+                     fill = kmean_cluster,
+                     colour = kmean_cluster)) +
   geom_histogram(mapping = aes(y = after_stat(density)),
                  position="identity",
                  bins = 20,
@@ -135,7 +207,7 @@ ggplot(data = data,
   scale_fill_manual(values = c("#440154FF", "#21908CFF", "#d1af06")) +
   scale_colour_manual(values = c("#440154FF", "#21908CFF", "#d1af06")) +
   theme_minimal() +
-  labs(x = "Number of rented Bikes",
+  labs(x = "log(Revenues)",
        y = "Density",
        title = "Histogram and KDE for each Cluster") +
   theme(plot.title = element_text(hjust = 0.5)) + 
@@ -146,7 +218,7 @@ ggplot(data = data,
 ggparcoord(data = data,
            columns = c(6, 10, 11, 12, 13, 14, 21),
            alphaLines = 0.1,
-           groupColumn = "cluster") + 
+           groupColumn = "kmean_cluster") + 
   theme_minimal() +
   scale_colour_manual(values = c("#440154FF", "#21908CFF", "#d1af06")) +
   guides(colour = guide_legend(override.aes = list(alpha = 1))) +
@@ -157,15 +229,89 @@ ggparcoord(data = data,
   theme(legend.title = element_blank()) +
   ylim(-2, 5)
 
-colnames(data)
-
-library(fpc)
-
-Dbscan_cl <- dbscan(data[,c("pc1", "pc2")], eps = 0.5, MinPts = 5)
-Dbscan_cl$cluster
-table(Dbscan_cl$cluster) 
 
 
-plot(Dbscan_cl, as.matrix(data[,c("pc1", "pc2")]), main = "DBScan")
-pairs(data[,c("pc1", "pc2")], col = Dbscan_cl$cluster + 1L)
-fviz_cluster(Dbscan_cl, data = as.matrix(data[,c("pc1", "pc2")]), geom = "point")
+#### Multidimensional Scaling ####
+
+dism = dist(scale(data_num), 
+            method = "manhattan", 
+            diag = TRUE, 
+            upper = TRUE)
+
+mds <- cmdscale(dism, 
+                k = 2, 
+                eig = TRUE)
+
+data$mds_d1 <- mds$points[, 1]
+data$mds_d2 <- mds$points[, 2]
+
+
+# k-means algorithm
+k_means_mds <- kmeans(x = data[,c("mds_d1", "mds_d2")], 
+                  centers = 3, 
+                  nstart = 1000)
+
+# Adding cluster variable to the data set
+data$kmean_mds_cluster <- as.factor(k_means_mds$cluster)
+
+# Relevelling to plot the histograms in the desired order
+levels(data$kmean_mds_cluster) <- c("C2", "C3", "C1")
+data$kmean_mds_cluster <- relevel(data$kmean_mds_cluster, ref = 3)
+
+
+
+ggplot(data = data, 
+       mapping = aes(x = mds_d1,
+                     y = mds_d2,
+                     color = kmean_mds_cluster)) +
+  geom_point(size = 0.8, alpha = 0.8) +
+  scale_colour_manual(values = c("#440154", "#21918c", "#d1af06")) +
+  theme_minimal() +
+  labs(x = paste("Dim 1 (", round(var_exp[1], 2), "%)", sep = ""),
+       y = paste("Dim 2 (", round(var_exp[2], 2), "%)", sep = ""),
+       title = "3-Means-Clustering") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(legend.title = element_blank()) +
+  guides(color = guide_legend(override.aes = list(size = 4)))
+
+
+
+
+# Histogram for the different clusters
+ggplot(data = data,
+       mapping = aes(x = log_revenues, 
+                     fill = kmean_mds_cluster,
+                     colour = kmean_mds_cluster)) +
+  geom_histogram(mapping = aes(y = after_stat(density)),
+                 position="identity",
+                 bins = 20,
+                 alpha = 0.5) +
+  geom_density(kernel = "gaussian", 
+               bw = "nrd0", 
+               alpha = 0,
+               linewidth = 0.8) +
+  scale_fill_manual(values = c("#440154FF", "#21908CFF", "#d1af06")) +
+  scale_colour_manual(values = c("#440154FF", "#21908CFF", "#d1af06")) +
+  theme_minimal() +
+  labs(x = "log(Revenues)",
+       y = "Density",
+       title = "Histogram and KDE for each Cluster") +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(legend.title = element_blank())
+
+
+# Parallel Coordinates
+ggparcoord(data = data,
+           columns = c(6, 10, 11, 12, 13, 14, 21),
+           alphaLines = 0.1,
+           groupColumn = "kmean_mds_cluster") + 
+  theme_minimal() +
+  scale_colour_manual(values = c("#440154FF", "#21908CFF", "#d1af06")) +
+  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
+  labs(x = "",
+       y = "",
+       title = "") +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(legend.title = element_blank()) +
+  ylim(-2, 5)
+
