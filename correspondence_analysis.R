@@ -175,7 +175,7 @@ fviz_ca_biplot(ca_industry_score1,
                shape.row = 15, 
                shape.col = 19) +
   theme_minimal() +
-  labs(title = "Correspondence Analysis - Geographic Area vs Industry Sector") +
+  labs(title = "Correspondence Analysis - Industry Sector vs External Score") +
   theme(plot.title = element_text(hjust = 0.5))
 
 
@@ -216,8 +216,8 @@ plot_data$category <- c(rep("geo_area", 5),
                         rep("default", 2))
 
 plot_data <- plot_data %>% 
-  rename("dim1" = "Dim 1",
-         "dim2" = "Dim 2")
+  dplyr::rename("dim1" = "Dim 1",
+               "dim2" = "Dim 2")
 
 
 ggplot(plot_data, aes(x=dim1, 
@@ -262,8 +262,8 @@ plot2_data$category <- c(rep("province", 106),
                         rep("score1", 9))
 
 plot2_data <- plot2_data %>% 
-  rename("dim1" = "Dim 1",
-         "dim2" = "Dim 2")
+  dplyr::rename("dim1" = "Dim 1",
+                "dim2" = "Dim 2")
 
 
 ggplot(plot2_data, aes(x=dim1, 
