@@ -10,12 +10,12 @@ data <- read.csv("preprocessed_data.csv",
 
 # Data for hierarchical clustering
 hc_data <- data %>% 
-  select(province, age, revenues, profits, 
+  dplyr::select(province, age, revenues, profits, 
          gross_margin_ratio, core_income_ratio, cash_asset_ratio, 
          consolidated_liabilities_ratio) %>% 
-  group_by(province) %>% 
-  filter(n() >= 10) %>% 
-  summarise(across(everything(), median)) %>%
+  dplyr::group_by(province) %>% 
+  dplyr::filter(n() >= 10) %>% 
+  dplyr::summarise(across(everything(), median)) %>%
   as.data.frame()
 
 row.names(hc_data) <- hc_data$province
@@ -52,7 +52,7 @@ dend1 %>%
   set("branches_lwd", 1.75) %>%
   set("labels_col", value = c("#7ad151","#22a884", "#414487", "#440154"), k=4) %>%
   set("branches_k_color", value = c("#7ad151","#22a884", "#414487", "#440154"), k = 4) %>%
-  plot(axes = FALSE, horiz = TRUE, main = "Hierarchical Clustering - Ward's Method")
+  plot(axes = FALSE, horiz = TRUE, main = "")
 
 
 
@@ -90,3 +90,4 @@ tanglegram(dl,
            axes = FALSE,
            main_left = "Ward's Method",
            main_right = "Complete Linkage")
+
