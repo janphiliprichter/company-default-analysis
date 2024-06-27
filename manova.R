@@ -11,8 +11,8 @@ library(viridis)
 
 # Reading the data set
 data <- read.csv("preprocessed_data.csv",
-                 tryLogical=TRUE,
-                 stringsAsFactors=TRUE)
+                 tryLogical = TRUE,
+                 stringsAsFactors = TRUE)
 
 
 # Subset of data where each industry sector appears > 50 times
@@ -65,11 +65,11 @@ onewaytests::nor.test(log_profits ~ industry_sector,
 
 # Mardia's test
 mvn(data[, c("log_revenues", "log_profits")], 
-    mvnTest="hz")
+    mvnTest="mardia")
 
 # Henze-Zirkler's test 
 mvn(data[, c("log_revenues", "log_profits")], 
-    mvnTest="mardia")
+    mvnTest="hz")
 
 # Royston's test 
 mvn(data[, c("log_revenues", "log_profits")], 
@@ -79,12 +79,12 @@ mvn(data[, c("log_revenues", "log_profits")],
 mvn(data[, c("log_revenues", "log_profits")], 
     mvnTest="dh")
 
-# Mardia's test for each geo_area group
+# Henze-Zirkler's test for each geo_area group
 tapply(X=data[, c("log_revenues", "log_profits")], 
        INDEX=data$geo_area, 
        FUN=mvn)
 
-# Mardia's test for each industry_sector group
+# Henze-Zirkler's test for each industry_sector group
 tapply(X=industry_data[, c("log_revenues", "log_profits")], 
        INDEX=industry_data$industry_sector, 
        FUN=mvn)
@@ -102,6 +102,17 @@ heplots::boxM(data[, c("log_revenues", "log_profits")],
 heplots::boxM(industry_data[, c("log_revenues", "log_profits")], 
               industry_data$industry_sector)
 
+
+
+### One-way ANOVA ###
+
+# geo_area
+summary(aov(log_revenues ~ geo_area, data=data))
+summary(aov(log_profits ~ geo_area, data=data))
+
+# industry_sector
+summary(aov(log_revenues ~ industry_sector, data=data))
+summary(aov(log_profits ~ industry_sector, data=data))
 
 
 ### MANOVA ###
@@ -172,12 +183,12 @@ hist_plot <-
   ggplot(data, 
          mapping=aes(x=log_revenues)) + 
   geom_histogram(mapping = aes(y = after_stat(density)), 
-                 fill = "#21918c", 
-                 color = "#0e3b39", 
+                 fill = "#3b528b", 
+                 color = "#1b2640", 
                  alpha = 0.7, 
                  bins = 20) +
   stat_function(lwd=1,
-                color="#3b528b",
+                color="#440154",
                 fun=dnorm, 
                 args=list(mean=mean(data$log_revenues), 
                           sd=sd(data$log_revenues))) +
@@ -308,9 +319,4 @@ scatter_bvn <- ggplot(mapping=aes(x=bvn_data[,1], y=bvn_data[,2])) +
 
 # Grid plot
 grid.arrange(scatter_real, scatter_bvn, nrow=1)
-
-
-
-
-
 
