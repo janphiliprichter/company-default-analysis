@@ -21,10 +21,10 @@ set.seed(42)
 
 
 # Numerical data for dimensionality reduction
-data_num <- data[, c("age", "log_revenues", 
+data_num <- data[, c("log_age", "log_revenues", 
                      "log_profits", "sqrt_gmr", "last_statement_age", 
                      "core_income_ratio", "cash_asset_ratio", 
-                     "consolidated_liabilities_ratio", "month","month_day")]
+                     "consolidated_liabilities_ratio", "month", "month_day")]
 
 
 
@@ -52,7 +52,7 @@ var_exp <- pc_var / sum(pc_var) * 100
 ggplot(data.frame(var_exp)) + 
   geom_bar(mapping = aes(x = 1:length(var_exp),
                          y = var_exp),
-           fill = "#21918c",
+           fill = "#440154",
            stat = "identity") +
   geom_line(mapping = aes(x = 1:length(var_exp), 
                           y = cumsum(var_exp)),
@@ -89,7 +89,7 @@ data$pc2 <- svd$x[,"PC2"]
 
 ### DBSCAN Clustering ###
 
-dbscan_cl <- dbscan(data[,c("pc1", "pc2")], eps = 0.5, MinPts = 5)
+dbscan_cl <- dbscan(data[,c("pc1", "pc2")], eps = 0.335, MinPts = 5)
 table(dbscan_cl$cluster) 
 
 # Adding cluster variable to the data set
@@ -97,8 +97,7 @@ data$dbscan_cluster <- as.factor(dbscan_cl$cluster)
 
 
 # Relevelling to plot the histograms in the desired order
-levels(data$dbscan_cluster) <- c( "C2", "C1", "No cluster", "C3")
-data$dbscan_cluster <- relevel(data$dbscan_cluster, ref = 3)
+levels(data$dbscan_cluster) <- c( "No cluster", "C1", "C2", "C3")
 
 
 # Scatterplot of the clusters
@@ -107,7 +106,7 @@ ggplot(data = data,
                      y = pc2,
                      color = dbscan_cluster)) +
   geom_point(size = 0.8, alpha = 0.8) +
-  scale_colour_manual(values = c("red", "#21918c", "#d1af06", "#440154")) +
+  scale_colour_manual(values = c("black", "#21918c", "#d1af06", "#440154")) +
   theme_minimal() +
   labs(x = paste("PC1 (", round(var_exp[1], 2), "%)", sep = ""),
        y = paste("PC2 (", round(var_exp[2], 2), "%)", sep = ""),
@@ -180,7 +179,7 @@ plot2 <- ggplot(data = data,
                      y = pc2,
                      color = kmedoids_cluster)) +
   geom_point(size = 0.8, alpha = 0.8) +
-  scale_colour_manual(values = c("#440154", "#d1af06", "#21918c")) +
+  scale_colour_manual(values = c("#d1af06", "#440154", "#21918c")) +
   theme_minimal() +
   labs(x = paste("PC1 (", round(var_exp[1], 2), "%)", sep = ""),
        y = paste("PC2 (", round(var_exp[2], 2), "%)", sep = ""),
@@ -190,7 +189,7 @@ plot2 <- ggplot(data = data,
 
 grid.arrange(plot1, plot2, ncol=2)
 
-
+d1af06
 # Histogram for the different clusters
 ggplot(data = data,
        mapping = aes(x = log_revenues, 
@@ -267,8 +266,8 @@ ggplot(data = data,
   geom_point(size = 0.8, alpha = 0.8) +
   scale_colour_manual(values = c("#440154", "#21918c", "#d1af06")) +
   theme_minimal() +
-  labs(x = paste("Dim 1 (", round(var_exp[1], 2), "%)", sep = ""),
-       y = paste("Dim 2 (", round(var_exp[2], 2), "%)", sep = ""),
+  labs(x = "Dim 1",
+       y = "Dim 2",
        title = "3-Means-Clustering") +
   theme(plot.title = element_text(hjust = 0.5)) +
   theme(legend.title = element_blank()) +
@@ -314,4 +313,5 @@ ggparcoord(data = data,
   theme(plot.title = element_text(hjust = 0.5)) + 
   theme(legend.title = element_blank()) +
   ylim(-2, 5)
+
 
