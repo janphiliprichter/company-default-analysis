@@ -10,6 +10,7 @@ library(scales)
 library(dplyr)
 library(MLmetrics)
 library(Gifi)
+library(ggcorrplot)
 
 
 # Reading the data set
@@ -19,6 +20,23 @@ data <- read.csv("preprocessed_data.csv",
 
 # Setting random seed
 set.seed(42)
+
+
+# Correlation Plot
+
+corr_data <- data[, c("revenues", "profits", "gross_margin_ratio", 
+                      "core_income_ratio", "cash_asset_ratio", 
+                      "consolidated_liabilities_ratio", "age")]
+
+corr_matrix <- cor(corr_data)
+
+
+ggcorrplot(corr_matrix, outline.col = "white", 
+           type = "lower",
+           colors = c("#fcd303",  "#21908CFF", "#440154FF"),
+           lab = TRUE) +
+  labs(title = "Correlation Heatmap") +
+  theme(plot.title = element_text(hjust = 0.5))
 
 
 ### Calculating Principal Components for PCA Regression
@@ -65,7 +83,7 @@ test <- data[!sample, ]
 ## Logistic Regression with all Variables
 
 # Model definition
-mod_all <- glm(default ~ score1 + score2 + score3 + geo_area + sqrt_gmr + 
+mod_all <- glm(default ~ score1 + score2 + geo_area + sqrt_gmr + 
                  core_income_ratio + cash_asset_ratio + 
                  consolidated_liabilities_ratio + cr_available + 
                  last_statement_age + log_age + log_revenues + log_profits +
@@ -221,7 +239,37 @@ BIC(mod_pca)
 BIC(mod_nlpca)
 
 
+
+# Bar plot
+evals <- data.frame(method = c("All Variables", "Best Subset", "PCA", "NLPCA", 
+                               "All Variables", "Best Subset", "PCA", "NLPCA"),
+                    eval = c(AIC(mod_all), AIC(mod_best), AIC(mod_pca), AIC(mod_nlpca),
+                             BIC(mod_all), BIC(mod_best), BIC(mod_pca), BIC(mod_nlpca)),
+                    metric = c(rep("AIC", 4),
+                               rep("BIC", 4)))
+
+
+ggplot(data = evals,
+       mapping = aes(x = factor(method, 
+                                levels = c("All Variables", "Best Subset", 
+                                           "PCA", "NLPCA")),
+                     y = eval,
+                     fill = metric)) + 
+  geom_bar(stat = "identity",
+           position = position_dodge(),
+           alpha = 0.9) +
+  scale_fill_manual(values = c("#023740", "#21918c")) +
+  theme_minimal() +
+  labs(x = "",
+       y = "") +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  guides(fill = guide_legend(title = "Metric")) + 
+  theme(axis.text.x = element_text(angle = 315))
+
+
+
 ## Predictions
+
 
 # All variables
 pred_all <- predict(mod_all, newdata = test, type = "response")
