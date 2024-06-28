@@ -189,7 +189,7 @@ plot2 <- ggplot(data = data,
 
 grid.arrange(plot1, plot2, ncol=2)
 
-d1af06
+
 # Histogram for the different clusters
 ggplot(data = data,
        mapping = aes(x = log_revenues, 
